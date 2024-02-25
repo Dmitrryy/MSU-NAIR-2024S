@@ -30,3 +30,6 @@
 *.exe
 *.out
 *.app
+
+task1/build
+task1/build-gpu
