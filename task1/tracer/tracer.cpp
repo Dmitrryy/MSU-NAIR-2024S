@@ -87,6 +87,34 @@ static inline float DE_sphere(float3 pos) {
   return std::max(0.0f, length(pos) - R);
 }
 
+static inline float DE_tetrahedron(float3 pos) {
+  const uint32_t Iterations = 10;
+  const float Scale = 2.0f;
+
+  const float figSize = 1.5f;
+  const float3 a1 = figSize * float3(1,1,1);
+	const float3 a2 = figSize * float3(-1,-1,1);
+	const float3 a3 = figSize * float3(1,-1,-1);
+	const float3 a4 = figSize * float3(-1,1,-1);
+
+	float3 c;
+	int n = 0;
+
+	float dist, d;
+	while (n < Iterations) {
+		c = a1; 
+    dist = length(pos-a1);
+
+	  d = length(pos-a2); if (d < dist) { c = a2; dist=d; }
+		d = length(pos-a3); if (d < dist) { c = a3; dist=d; }
+		d = length(pos-a4); if (d < dist) { c = a4; dist=d; }
+
+		pos = Scale*pos-c*(Scale-1.0);
+		n++;
+	}
+	return length(pos) * pow(Scale, float(-n));
+}
+
 void RayMarcherExample::kernel2D_RayMarch(uint32_t* out_color, uint32_t width, uint32_t height) 
 {
   for(uint32_t y=0;y<height;y++) 
@@ -98,23 +126,23 @@ void RayMarcherExample::kernel2D_RayMarch(uint32_t* out_color, uint32_t width, u
 
       transform_ray3f(m_worldViewInv, &rayPos, &rayDir);
 
-      const uint32_t MAX_ITER = 100;
+      const uint32_t MAX_ITER = 255;
       const float3 light_dir{0.5f, 0.5f, 0.5f};
-      const float eps = 0.00001f;
+      const float eps = 0.01f;
 
       float4 resColor(0.0f);
       float prev_dist = 1.f / eps;
       float3 prev_pos = rayPos;
       for(uint32_t i = 0; i < MAX_ITER; ++i) {
-        const float dist = DE_sphere(rayPos);
+        const float dist = DE_tetrahedron(rayPos);
 
         if (dist < eps) {
           resColor = {1.f, 1.f, 1.f, 1.f};
 
           // calculate normal
-          const float dx = DE_sphere(prev_pos + float3(eps, 0.f, 0.f)) - prev_dist;
-          const float dy = DE_sphere(prev_pos + float3(0.f, eps, 0.f)) - prev_dist;
-          const float dz = DE_sphere(prev_pos + float3(0.f, 0.f, eps)) - prev_dist;
+          const float dx = DE_tetrahedron(prev_pos + float3(eps, 0.f, 0.f)) - prev_dist;
+          const float dy = DE_tetrahedron(prev_pos + float3(0.f, eps, 0.f)) - prev_dist;
+          const float dz = DE_tetrahedron(prev_pos + float3(0.f, 0.f, eps)) - prev_dist;
           const float3 normal = normalize(float3{dx, dy, dz});
 
           resColor *= std::max(0.1f, dot(normal, light_dir));
@@ -124,7 +152,10 @@ void RayMarcherExample::kernel2D_RayMarch(uint32_t* out_color, uint32_t width, u
         prev_pos = rayPos;
         prev_dist = dist;
 
-        rayPos += rayDir * dist;
+        rayPos += rayDir * dist; 
+        if (length(rayPos) > 10.0) {
+          break;
+        }
       }
       
       out_color[y*width+x] = RealColorToUint32(resColor);

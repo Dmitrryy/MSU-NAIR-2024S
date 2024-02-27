@@ -20,8 +20,8 @@ int main(int argc, const char** argv)
   bool enableValidationLayers = false;
   #endif
 
-  uint WIN_WIDTH  = 512;
-  uint WIN_HEIGHT = 512;
+  uint WIN_WIDTH  = 1024;
+  uint WIN_HEIGHT = 1024;
 
   std::shared_ptr<RayMarcherExample> pImpl = nullptr;
   #ifdef USE_VULKAN
