@@ -31,5 +31,9 @@
 *.out
 *.app
 
+.vscode
+
 task1/build
 task1/build-gpu
+task1/tracer/include
+task1/tracer/*generated*

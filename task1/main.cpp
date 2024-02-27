@@ -41,7 +41,7 @@ int main(int argc, const char** argv)
 
   std::vector<uint> pixelData(WIN_WIDTH*WIN_HEIGHT);  
 
-  for(int angleY = 0; angleY < 360; angleY += 10) 
+  for(int angleY = 0; angleY < 360; angleY += 60) 
   {
     float4x4 mRot    = rotate4x4Y(float(angleY)*DEG_TO_RAD);
     float4   camPos  = mRot*float4(0,0,-3,0) + float4(0,1.5f,0,1);              // rotate and than translate camera position

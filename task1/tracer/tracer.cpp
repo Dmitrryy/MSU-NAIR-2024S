@@ -82,6 +82,11 @@ static inline uint32_t RealColorToUint32(float4 real_color)
   return red | (green << 8) | (blue << 16) | (alpha << 24);
 }
 
+static inline float DE_sphere(float3 pos) {
+  const float R = 1.5f;
+  return std::max(0.0f, length(pos) - R);
+}
+
 void RayMarcherExample::kernel2D_RayMarch(uint32_t* out_color, uint32_t width, uint32_t height) 
 {
   for(uint32_t y=0;y<height;y++) 
@@ -92,14 +97,34 @@ void RayMarcherExample::kernel2D_RayMarch(uint32_t* out_color, uint32_t width, u
       float3 rayPos = float3(0.0f, 0.0f, 0.0f);
 
       transform_ray3f(m_worldViewInv, &rayPos, &rayDir);
-      
-      float2 tNearAndFar = RayBoxIntersection(rayPos, rayDir, float3(-1,-1,-1), float3(1,1,1));
-      
+
+      const uint32_t MAX_ITER = 100;
+      const float3 light_dir{0.5f, 0.5f, 0.5f};
+      const float eps = 0.00001f;
+
       float4 resColor(0.0f);
-      if(tNearAndFar.x < tNearAndFar.y && tNearAndFar.x > 0.0f)
-      {
-        float alpha = 1.0f;
-	      resColor = RayMarchConstantFog(tNearAndFar.x, tNearAndFar.y, alpha);
+      float prev_dist = 1.f / eps;
+      float3 prev_pos = rayPos;
+      for(uint32_t i = 0; i < MAX_ITER; ++i) {
+        const float dist = DE_sphere(rayPos);
+
+        if (dist < eps) {
+          resColor = {1.f, 1.f, 1.f, 1.f};
+
+          // calculate normal
+          const float dx = DE_sphere(prev_pos + float3(eps, 0.f, 0.f)) - prev_dist;
+          const float dy = DE_sphere(prev_pos + float3(0.f, eps, 0.f)) - prev_dist;
+          const float dz = DE_sphere(prev_pos + float3(0.f, 0.f, eps)) - prev_dist;
+          const float3 normal = normalize(float3{dx, dy, dz});
+
+          resColor *= std::max(0.1f, dot(normal, light_dir));
+          break;
+        }
+
+        prev_pos = rayPos;
+        prev_dist = dist;
+
+        rayPos += rayDir * dist;
       }
       
       out_color[y*width+x] = RealColorToUint32(resColor);
