@@ -83,7 +83,7 @@ static inline uint32_t RealColorToUint32(float4 real_color)
 }
 
 static inline float DE_sphere(float3 pos) {
-  const float R = 1.5f;
+  const float R = 1.f;
   return std::max(0.0f, length(pos) - R);
 }
 
@@ -91,7 +91,7 @@ static inline float DE_tetrahedron(float3 pos) {
   const uint32_t Iterations = 10;
   const float Scale = 2.0f;
 
-  const float figSize = 1.5f;
+  const float figSize = 1.f;
   const float3 a1 = figSize * float3(1,1,1);
 	const float3 a2 = figSize * float3(-1,-1,1);
 	const float3 a3 = figSize * float3(1,-1,-1);
@@ -115,6 +115,21 @@ static inline float DE_tetrahedron(float3 pos) {
 	return length(pos) * pow(Scale, float(-n));
 }
 
+static inline float DE(float3 pos) {
+  float result = 1 / 0.00000001f;
+  
+  // plate
+  result = std::min(result, pos.y + 1.f);
+
+  // fig 1
+  result = std::min(result, DE_tetrahedron(pos));
+
+  // fig 2
+  result = std::min(result, DE_sphere(pos + float3(1.5f, 0.f, 1.5f)));
+
+  return result;
+}
+
 void RayMarcherExample::kernel2D_RayMarch(uint32_t* out_color, uint32_t width, uint32_t height) 
 {
   for(uint32_t y=0;y<height;y++) 
@@ -134,15 +149,15 @@ void RayMarcherExample::kernel2D_RayMarch(uint32_t* out_color, uint32_t width, u
       float prev_dist = 1.f / eps;
       float3 prev_pos = rayPos;
       for(uint32_t i = 0; i < MAX_ITER; ++i) {
-        const float dist = DE_tetrahedron(rayPos);
+        const float dist = DE(rayPos);
 
         if (dist < eps) {
           resColor = {1.f, 1.f, 1.f, 1.f};
 
           // calculate normal
-          const float dx = DE_tetrahedron(prev_pos + float3(eps, 0.f, 0.f)) - prev_dist;
-          const float dy = DE_tetrahedron(prev_pos + float3(0.f, eps, 0.f)) - prev_dist;
-          const float dz = DE_tetrahedron(prev_pos + float3(0.f, 0.f, eps)) - prev_dist;
+          const float dx = DE(prev_pos + float3(eps, 0.f, 0.f)) - prev_dist;
+          const float dy = DE(prev_pos + float3(0.f, eps, 0.f)) - prev_dist;
+          const float dz = DE(prev_pos + float3(0.f, 0.f, eps)) - prev_dist;
           const float3 normal = normalize(float3{dx, dy, dz});
 
           resColor *= std::max(0.1f, dot(normal, light_dir));

@@ -4,11 +4,11 @@ Task: visualization of a scene whose objects are represented as a function of di
 
 ## TODO
 
-- [ ] 3D Sierpinski triangle (CPU)
-- [ ] Transfer to GPU
+- [x] 3D Sierpinski triangle (CPU)
+- [x] Transfer to GPU
 - [ ] Supersampling
 - [ ] Shadows
-- [ ] Settings for camera position
+- [x] Settings for camera position
 - [ ] Reflection
 - [ ] Ambient Occlusion
 - [ ] Unique color for each object
