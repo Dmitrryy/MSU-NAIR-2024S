@@ -14,6 +14,8 @@ Task: visualization of a scene whose objects are represented as a function of di
 - [ ] Unique color for each object
 - [x] kernel_slicer usage
 
+![Cur result](imgs/out_gpu_120.bmp)
+
 ## Build
 
 ### CPU
@@ -28,7 +30,7 @@ cmake -GNinja -DCMAKE_BUILD_TYPE=Release ..
 cmake --build . -j8
 ```
 ### GPU
-This will download, build and use kernek_slicer automatically, so no addition actions required.
+This will download, build and use kernel_slicer automatically, so no addition actions required.
 
 ```
 mkdir build && cd build
