@@ -165,6 +165,33 @@ static inline float DE(float3 pos, float4 &color) {
   return result;
 }
 
+inline float3 calculateNorm(float3 pos, float eps) {
+  float4 ignore;
+  const float dx = DE(pos + float3(eps, 0.f, 0.f), ignore) - DE(pos - float3(eps, 0.f, 0.f), ignore);
+  const float dy = DE(pos + float3(0.f, eps, 0.f), ignore) - DE(pos - float3(0.f, eps, 0.f), ignore);
+  const float dz = DE(pos + float3(0.f, 0.f, eps), ignore) - DE(pos - float3(0.f, 0.f, eps), ignore);
+  return normalize(float3{dx, dy, dz});
+}
+
+inline float calculateLight(float3 pos, float3 normal, float3 light_dir, float eps, int MAX_ITER, float MAX_DIST) {
+  float3 shadowRayPos = pos + normal * eps;
+  float3 shadowRayDir = light_dir;
+  float4 ignore;
+  bool shadowed = false;
+  for(uint32_t s = 0; s < MAX_ITER; ++s) {
+    const float d = DE(shadowRayPos, ignore);
+    if (d < eps) {
+      shadowed = true;
+      break;
+    }
+    if (d > MAX_DIST) {
+      break;
+    }
+    shadowRayPos += d * shadowRayDir;
+  }
+  return std::max(0.1f, dot(normal, light_dir) * (1 - shadowed));
+}
+
 void RayMarcherExample::kernel2D_RayMarch(uint32_t* out_color, uint32_t width, uint32_t height) 
 {
   for(uint32_t y=0;y<height;y++) 
@@ -179,7 +206,6 @@ void RayMarcherExample::kernel2D_RayMarch(uint32_t* out_color, uint32_t width, u
 
       const uint32_t MAX_ITER = 255;
       const float MAX_DIST = 10.f;
-      const float3 light_dir = normalize(float3{0.3f, 0.5f, 0.5f});
       const float eps = 0.00001f;
 
       float4 resColor(0.0f);
@@ -196,35 +222,8 @@ void RayMarcherExample::kernel2D_RayMarch(uint32_t* out_color, uint32_t width, u
         }
 
         if (dist < eps) {
-          // calculate normal
-          const float dx = DE(prev_pos + float3(eps, 0.f, 0.f), resColor) - DE(prev_pos - float3(eps, 0.f, 0.f), resColor);
-          const float dy = DE(prev_pos + float3(0.f, eps, 0.f), resColor) - DE(prev_pos - float3(0.f, eps, 0.f), resColor);
-          const float dz = DE(prev_pos + float3(0.f, 0.f, eps), resColor) - DE(prev_pos - float3(0.f, 0.f, eps), resColor);
-          const float3 normal = normalize(float3{dx, dy, dz});
-
-          // shadow
-          //    make step away surface
-          float3 shadowRayPos = rayPos + normal * eps;
-          float3 shadowRayDir = light_dir;
-          float4 ignore;
-          bool shadowed = false;
-          for(uint32_t s = 0; s < MAX_ITER; ++s) {
-            const float d = DE(shadowRayPos, ignore);
-
-            if (d < eps) {
-              shadowed = true;
-              break;
-            }
-            if (d > MAX_DIST) {
-              break;
-            }
-            shadowRayPos += d * shadowRayDir;
-          }
-          if (shadowed) {
-            resColor *= 0.1f;
-          } else {
-            resColor *= std::max(0.1f, dot(normal, light_dir));
-          }
+          const float3 normal = calculateNorm(prev_pos, eps);
+          resColor *= calculateLight(rayPos, normal, light_dir, eps, MAX_ITER, MAX_DIST);
           break;
         }
 

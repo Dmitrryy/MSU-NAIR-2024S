@@ -28,7 +28,7 @@ int main(int argc, const char** argv)
   bool onGPU = true; // TODO: you can read it from command line
   if(onGPU)
   {
-    auto ctx = vk_utils::globalContextGet(enableValidationLayers, 0);
+    auto ctx = vk_utils::globalContextGet(enableValidationLayers, 1);
     pImpl    = CreateRayMarcherExample_Generated(ctx, WIN_WIDTH*WIN_HEIGHT);
   }
   else

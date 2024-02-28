@@ -18,6 +18,7 @@ public:
     const float4x4 proj = perspectiveMatrix(90.0f, 1.0f, 0.1f, 100.0f);
     m_worldViewInv      = inverse4x4(view); 
     m_worldViewProjInv  = inverse4x4(proj); 
+    light_dir = normalize(float3{0.3f, 0.5f, 0.5f});
   }
 
   void SetWorldViewMatrix(const float4x4& a_mat) {m_worldViewInv = inverse4x4(a_mat);}
@@ -36,4 +37,5 @@ protected:
   float4x4 m_worldViewProjInv;
   float4x4 m_worldViewInv;
   float    rayMarchTime;
+  float3   light_dir;
 };
