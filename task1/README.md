@@ -7,14 +7,14 @@ Task: visualization of a scene whose objects are represented as a function of di
 - [x] 3D Sierpinski triangle (CPU)
 - [x] Transfer to GPU
 - [ ] Supersampling
-- [ ] Shadows
+- [x] Shadows
 - [x] Settings for camera position
 - [ ] Reflection
 - [ ] Ambient Occlusion
 - [x] Unique color for each object
 - [x] kernel_slicer usage
 
-![Cur result](imgs/out_gpu_240.bmp)
+![Cur result](imgs/out_gpu_270.bmp)
 
 ## Build
 

@@ -123,7 +123,7 @@ static inline float DE(float3 pos, float4 &color) {
   
   // plate
   // result = std::min(result, SDE_Parallelepiped(pos + float3(0.f, 1.f, 0.f), float3(3.f, 0.1f, 3.f)));
-  float d = SDE_Parallelepiped(pos + float3(0.f, 1.f, 0.f), float3(3.f, 0.1f, 3.f));
+  float d = SDE_Parallelepiped(pos + float3(0.f, 1.f, 0.f), float3(4.f, 0.1f, 4.f));
   if (d < result) {
     result = d;
     color = float4(153.f / 255, 255.f / 255, 255.f / 255, 1.f);
@@ -177,7 +177,8 @@ void RayMarcherExample::kernel2D_RayMarch(uint32_t* out_color, uint32_t width, u
 
       transform_ray3f(m_worldViewInv, &rayPos, &rayDir);
 
-      const uint32_t MAX_ITER = 1000;
+      const uint32_t MAX_ITER = 255;
+      const float MAX_DIST = 10.f;
       const float3 light_dir = normalize(float3{0.3f, 0.5f, 0.5f});
       const float eps = 0.00001f;
 
@@ -187,8 +188,12 @@ void RayMarcherExample::kernel2D_RayMarch(uint32_t* out_color, uint32_t width, u
       float3 prev_pos = rayPos;
       uint32_t i = 0;
       for(i = 0; i < MAX_ITER; ++i) {
-        const float pixel_size = unit_pixel_size * length(rayPos - origin);
         const float dist = DE(rayPos, resColor);
+
+        if (dist > MAX_DIST) {
+          resColor = float4(0.f);
+          break;
+        }
 
         if (dist < eps) {
           // calculate normal
@@ -197,7 +202,29 @@ void RayMarcherExample::kernel2D_RayMarch(uint32_t* out_color, uint32_t width, u
           const float dz = DE(prev_pos + float3(0.f, 0.f, eps), resColor) - DE(prev_pos - float3(0.f, 0.f, eps), resColor);
           const float3 normal = normalize(float3{dx, dy, dz});
 
-          resColor *= std::max(0.1f, dot(normal, light_dir));
+          // shadow
+          //    make step away surface
+          float3 shadowRayPos = rayPos + normal * eps;
+          float3 shadowRayDir = light_dir;
+          float4 ignore;
+          bool shadowed = false;
+          for(uint32_t s = 0; s < MAX_ITER; ++s) {
+            const float d = DE(shadowRayPos, ignore);
+
+            if (d < eps) {
+              shadowed = true;
+              break;
+            }
+            if (d > MAX_DIST) {
+              break;
+            }
+            shadowRayPos += d * shadowRayDir;
+          }
+          if (shadowed) {
+            resColor *= 0.1f;
+          } else {
+            resColor *= std::max(0.1f, dot(normal, light_dir));
+          }
           break;
         }
 
