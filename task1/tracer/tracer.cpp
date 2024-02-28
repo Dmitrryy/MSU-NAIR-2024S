@@ -87,42 +87,42 @@ static inline float DE_sphere(float3 pos) {
   return std::max(0.0f, length(pos) - R);
 }
 
-static inline float DE_tetrahedron(float3 pos) {
-  const uint32_t Iterations = 10;
-  const float Scale = 2.0f;
+static inline float DE_tetrahedron(float3 pos, int iters) {
 
-  const float figSize = 1.f;
-  const float3 a1 = figSize * float3(1,1,1);
-	const float3 a2 = figSize * float3(-1,-1,1);
-	const float3 a3 = figSize * float3(1,-1,-1);
-	const float3 a4 = figSize * float3(-1,1,-1);
+const float3 va (  0.0,  0.57735,  0.0 );
+const float3 vb (  0.0, -1.0,  1.15470 );
+const float3 vc (  1.0, -1.0, -0.57735 );
+const float3 vd ( -1.0, -1.0, -0.57735 );
 
-	float3 c;
-	int n = 0;
-
-	float dist, d;
-	while (n < Iterations) {
-		c = a1; 
-    dist = length(pos-a1);
-
-	  d = length(pos-a2); if (d < dist) { c = a2; dist=d; }
-		d = length(pos-a3); if (d < dist) { c = a3; dist=d; }
-		d = length(pos-a4); if (d < dist) { c = a4; dist=d; }
-
-		pos = Scale*pos-c*(Scale-1.0);
-		n++;
-	}
-	return length(pos) * pow(Scale, float(-n));
+    float a = 0.0;
+    float s = 1.0;
+    float r = 1.0;
+    float dm;
+    float3 v;
+    for(int i=0; i<iters; i++) {
+        float d, t;
+        d = dot(pos-va,pos-va);              v=va; dm=d; t=0.0;
+        d = dot(pos-vb,pos-vb); if( d<dm ) { v=vb; dm=d; t=1.0; }
+        d = dot(pos-vc,pos-vc); if( d<dm ) { v=vc; dm=d; t=2.0; }
+        d = dot(pos-vd,pos-vd); if( d<dm ) { v=vd; dm=d; t=3.0; }
+        pos = v + 2.0*(pos - v); r*= 2.0;
+        a = t + 4.0*a; s*= 4.0;
+    }
+    
+    return (sqrt(dm)-1.0)/r;//, a/s );
 }
 
 static inline float DE(float3 pos) {
-  float result = 1 / 0.00000001f;
+  float result = 1 / 0.000000001f;
   
   // plate
   result = std::min(result, pos.y + 1.f);
 
   // fig 1
-  result = std::min(result, DE_tetrahedron(pos));
+  result = std::min(result, DE_tetrahedron(pos, 5));
+
+  // fig 1.2
+  result = std::min(result, DE_tetrahedron(pos + float3(2.f, 0.f, 0.f), 8));
 
   // fig 2
   result = std::min(result, DE_sphere(pos + float3(1.5f, 0.f, 1.5f)));
@@ -136,28 +136,35 @@ void RayMarcherExample::kernel2D_RayMarch(uint32_t* out_color, uint32_t width, u
   {
     for(uint32_t x=0;x<width;x++) 
     {
+      const float unit_pixel_size = 1.f / float(width + height); 
       float3 rayDir = EyeRayDir((float(x) + 0.5f) / float(width), (float(y) + 0.5f) / float(height), m_worldViewProjInv); 
       float3 rayPos = float3(0.0f, 0.0f, 0.0f);
 
       transform_ray3f(m_worldViewInv, &rayPos, &rayDir);
 
-      const uint32_t MAX_ITER = 255;
-      const float3 light_dir{0.5f, 0.5f, 0.5f};
-      const float eps = 0.01f;
+      const uint32_t MAX_ITER = 1000;
+      const float3 light_dir = normalize(float3{0.3f, 0.5f, 0.5f});
+      const float eps = 0.00001f;
 
       float4 resColor(0.0f);
       float prev_dist = 1.f / eps;
+      const float3 origin = rayPos;
       float3 prev_pos = rayPos;
       for(uint32_t i = 0; i < MAX_ITER; ++i) {
-        const float dist = DE(rayPos);
+        if (length(rayPos) > 20.0) {
+          // resColor = {1.f, 0.f, 0.f, 1.f};
+          break;
+        }
+        const float pixel_size = unit_pixel_size * length(rayPos - origin);
+        const float dist = DE(rayPos);// - pixel_size;
 
         if (dist < eps) {
           resColor = {1.f, 1.f, 1.f, 1.f};
 
           // calculate normal
-          const float dx = DE(prev_pos + float3(eps, 0.f, 0.f)) - prev_dist;
-          const float dy = DE(prev_pos + float3(0.f, eps, 0.f)) - prev_dist;
-          const float dz = DE(prev_pos + float3(0.f, 0.f, eps)) - prev_dist;
+          const float dx = DE(prev_pos + float3(eps, 0.f, 0.f)) - DE(prev_pos - float3(eps, 0.f, 0.f));// - unit_pixel_size * length(rayPos + float3(eps, 0.f, 0.f) - origin);
+          const float dy = DE(prev_pos + float3(0.f, eps, 0.f)) - DE(prev_pos - float3(0.f, eps, 0.f));// - unit_pixel_size * length(rayPos + float3(0.f, eps, 0.f) - origin);
+          const float dz = DE(prev_pos + float3(0.f, 0.f, eps)) - DE(prev_pos - float3(0.f, 0.f, eps));// - unit_pixel_size * length(rayPos + float3(0.f, 0.f, eps) - origin);
           const float3 normal = normalize(float3{dx, dy, dz});
 
           resColor *= std::max(0.1f, dot(normal, light_dir));
@@ -168,9 +175,6 @@ void RayMarcherExample::kernel2D_RayMarch(uint32_t* out_color, uint32_t width, u
         prev_dist = dist;
 
         rayPos += rayDir * dist; 
-        if (length(rayPos) > 10.0) {
-          break;
-        }
       }
       
       out_color[y*width+x] = RealColorToUint32(resColor);
