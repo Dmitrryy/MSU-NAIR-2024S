@@ -11,10 +11,10 @@ Task: visualization of a scene whose objects are represented as a function of di
 - [x] Settings for camera position
 - [ ] Reflection
 - [ ] Ambient Occlusion
-- [ ] Unique color for each object
+- [x] Unique color for each object
 - [x] kernel_slicer usage
 
-![Cur result](imgs/out_gpu_120.bmp)
+![Cur result](imgs/out_gpu_240.bmp)
 
 ## Build
 
