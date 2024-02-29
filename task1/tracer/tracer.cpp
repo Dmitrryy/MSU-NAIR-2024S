@@ -118,15 +118,16 @@ const float3 vd ( -1.0, -1.0, -0.57735 );
     return float2((sqrt(dm)-1.0)/r, a/s );
 }
 
-static inline float DE(float3 pos, float4 &color) {
+static inline float DE(float3 pos, float4 &color, bool &is_mirror) {
   float result = 1 / 0.000000001f;
   
   // plate
   // result = std::min(result, SDE_Parallelepiped(pos + float3(0.f, 1.f, 0.f), float3(3.f, 0.1f, 3.f)));
-  float d = SDE_Parallelepiped(pos + float3(0.f, 1.f, 0.f), float3(4.f, 0.1f, 4.f));
+  float d = SDE_Parallelepiped(pos + float3(0.f, 1.f, 0.f), float3(4.5f, 0.1f, 4.5f));
   if (d < result) {
     result = d;
     color = float4(153.f / 255, 255.f / 255, 255.f / 255, 1.f);
+    is_mirror = false;
   }
 
   // fig 1
@@ -136,6 +137,7 @@ static inline float DE(float3 pos, float4 &color) {
     float3 color_tmp = 6.2831f * dt.y + float3(0.f, 1.f, 2.f);
     color_tmp = 0.5f + 0.5f * float3(cos(color_tmp.x), cos(color_tmp.y), cos(color_tmp.z));
     color = float4(color_tmp.x, color_tmp.y, color_tmp.z, 1.f);
+    is_mirror = false;
   }
 
   // fig 1.2
@@ -145,6 +147,7 @@ static inline float DE(float3 pos, float4 &color) {
     float3 color_tmp = 6.2831f * dt.y + float3(0.f, 1.f, 2.f);
     color_tmp = 0.5f + 0.5f * float3(cos(color_tmp.x), cos(color_tmp.y), cos(color_tmp.z));
     color = float4(color_tmp.x, color_tmp.y, color_tmp.z, 1.f);
+    is_mirror = false;
   }
 
   // fig 1.3
@@ -154,6 +157,7 @@ static inline float DE(float3 pos, float4 &color) {
     float3 color_tmp = 6.2831f * dt.y + float3(0.f, 1.f, 2.f);
     color_tmp = 0.5f + 0.5f * float3(cos(color_tmp.x), cos(color_tmp.y), cos(color_tmp.z));
     color = float4(color_tmp.x, color_tmp.y, color_tmp.z, 1.f);
+    is_mirror = false;
   }
 
   // fig 2
@@ -161,15 +165,34 @@ static inline float DE(float3 pos, float4 &color) {
   if (d < result) {
     result = d;
     color = float4(1.f);
+    is_mirror = false;
   }
+
+  // fig 3: cube
+  d = SDE_Parallelepiped(pos + float3(1.5f, 0.f, 3.5f), float3(1.f, 1.f, 1.f));
+  if (d < result) {
+    result = d;
+    color = float4(1.f);
+    is_mirror = false;
+  }
+
+  // fig 4: mirror
+  d = SDE_Parallelepiped(pos + float3(0.f, 0.f, -4.f), float3(4.f, 1.5f, 0.1f));
+  if (d < result) {
+    result = d;
+    color = float4(153.f / 255, 255.f / 255, 255.f / 255, 1.f);
+    is_mirror = true;
+  }
+
   return result;
 }
 
 inline float3 calculateNorm(float3 pos, float eps) {
   float4 ignore;
-  const float dx = DE(pos + float3(eps, 0.f, 0.f), ignore) - DE(pos - float3(eps, 0.f, 0.f), ignore);
-  const float dy = DE(pos + float3(0.f, eps, 0.f), ignore) - DE(pos - float3(0.f, eps, 0.f), ignore);
-  const float dz = DE(pos + float3(0.f, 0.f, eps), ignore) - DE(pos - float3(0.f, 0.f, eps), ignore);
+  bool ignore2;
+  const float dx = DE(pos + float3(eps, 0.f, 0.f), ignore, ignore2) - DE(pos - float3(eps, 0.f, 0.f), ignore, ignore2);
+  const float dy = DE(pos + float3(0.f, eps, 0.f), ignore, ignore2) - DE(pos - float3(0.f, eps, 0.f), ignore, ignore2);
+  const float dz = DE(pos + float3(0.f, 0.f, eps), ignore, ignore2) - DE(pos - float3(0.f, 0.f, eps), ignore, ignore2);
   return normalize(float3{dx, dy, dz});
 }
 
@@ -177,9 +200,10 @@ inline float calculateLight(float3 pos, float3 normal, float3 light_dir, float e
   float3 shadowRayPos = pos + normal * eps;
   float3 shadowRayDir = light_dir;
   float4 ignore;
+  bool ignore2;
   bool shadowed = false;
   for(uint32_t s = 0; s < MAX_ITER; ++s) {
-    const float d = DE(shadowRayPos, ignore);
+    const float d = DE(shadowRayPos, ignore, ignore2);
     if (d < eps) {
       shadowed = true;
       break;
@@ -191,14 +215,39 @@ inline float calculateLight(float3 pos, float3 normal, float3 light_dir, float e
   }
 
   // Ambient occlusion
-  const float4 coeffs(0.01f, 0.05f, 0.1f, 0.2f);
+  const float4 coeffs(0.1f, 0.1f, 0.25f, 0.4f);
   const float betta = coeffs[0] + coeffs[1] + coeffs[2] + coeffs[3];
-  const float alpha = DE(pos + normal * coeffs[0], ignore) + DE(pos + normal * coeffs[1], ignore) 
-  + DE(pos + normal * coeffs[2], ignore) 
-  + DE(pos + normal * coeffs[3], ignore);
-  const float ambient = max(0.001f, alpha / betta * 0.1f);
+  const float alpha = DE(pos + normal * coeffs[0], ignore, ignore2) 
+  + DE(pos + normal * coeffs[1], ignore, ignore2) 
+  + DE(pos + normal * coeffs[2], ignore, ignore2) 
+  + DE(pos + normal * coeffs[3], ignore, ignore2);
+  const float ambient = max(0.0001f, alpha / betta * 0.1f);
 
   return std::max(ambient, dot(normal, light_dir) * (1 - shadowed));
+}
+
+inline float4 calculateReflection(float3 pos, float3 eye_dir, float3 normal, float3 light_dir, float eps, int MAX_ITER, float MAX_DIST) {
+  float3 reflectDir = reflect(eye_dir, normal);
+  pos = pos + normal * eps;
+
+  float4 color;
+  bool ignore2;
+  float3 prev_pos = pos;
+  for(uint32_t s = 0; s < MAX_ITER; ++s) {
+    const float d = DE(pos, color, ignore2);
+    if (d < eps) {
+      const float3 normal = calculateNorm(prev_pos, eps);
+      color *= calculateLight(pos, normal, light_dir, eps, MAX_ITER, MAX_DIST);
+      break;
+    }
+    if (d > MAX_DIST) {
+      color = float4(0.f);
+      break;
+    }
+    prev_pos = pos;
+    pos += d * reflectDir;
+  }
+  return mix(float4(0.1, 0.12, 0.15, 1.f), color, 0.85f);
 }
 
 void RayMarcherExample::kernel2D_RayMarch(uint32_t* out_color, uint32_t width, uint32_t height) 
@@ -223,8 +272,9 @@ void RayMarcherExample::kernel2D_RayMarch(uint32_t* out_color, uint32_t width, u
       const float3 origin = rayPos;
       float3 prev_pos = rayPos;
       uint32_t i = 0;
+      bool is_mirror = false;
       for(i = 0; i < MAX_ITER; ++i) {
-        const float dist = DE(rayPos, resColor);
+        const float dist = DE(rayPos, resColor, is_mirror);
 
         if (dist > MAX_DIST) {
           resColor = float4(0.f);
@@ -233,7 +283,11 @@ void RayMarcherExample::kernel2D_RayMarch(uint32_t* out_color, uint32_t width, u
 
         if (dist < eps) {
           const float3 normal = calculateNorm(prev_pos, eps);
-          resColor *= calculateLight(rayPos, normal, light_dir, eps, MAX_ITER, MAX_DIST);
+          if (is_mirror) {
+            resColor = calculateReflection(rayPos, rayDir, normal, light_dir, eps, MAX_ITER, MAX_DIST);
+          } else {
+            resColor *= calculateLight(rayPos, normal, light_dir, eps, MAX_ITER, MAX_DIST);
+          }
           break;
         }
 
