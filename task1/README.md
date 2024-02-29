@@ -10,7 +10,7 @@ Task: visualization of a scene whose objects are represented as a function of di
 - [x] Shadows
 - [x] Settings for camera position
 - [ ] Reflection
-- [ ] Ambient Occlusion
+- [x] Ambient Occlusion
 - [x] Unique color for each object
 - [x] kernel_slicer usage
 

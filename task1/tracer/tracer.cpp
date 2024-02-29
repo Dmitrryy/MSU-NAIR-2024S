@@ -189,7 +189,16 @@ inline float calculateLight(float3 pos, float3 normal, float3 light_dir, float e
     }
     shadowRayPos += d * shadowRayDir;
   }
-  return std::max(0.1f, dot(normal, light_dir) * (1 - shadowed));
+
+  // Ambient occlusion
+  const float4 coeffs(0.01f, 0.05f, 0.1f, 0.2f);
+  const float betta = coeffs[0] + coeffs[1] + coeffs[2] + coeffs[3];
+  const float alpha = DE(pos + normal * coeffs[0], ignore) + DE(pos + normal * coeffs[1], ignore) 
+  + DE(pos + normal * coeffs[2], ignore) 
+  + DE(pos + normal * coeffs[3], ignore);
+  const float ambient = max(0.001f, alpha / betta * 0.1f);
+
+  return std::max(ambient, dot(normal, light_dir) * (1 - shadowed));
 }
 
 void RayMarcherExample::kernel2D_RayMarch(uint32_t* out_color, uint32_t width, uint32_t height) 
