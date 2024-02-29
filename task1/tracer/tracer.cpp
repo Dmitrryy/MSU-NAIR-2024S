@@ -4,33 +4,6 @@
 
 #include "tracer.hpp"
 
-float2 RayBoxIntersection(float3 ray_pos, float3 ray_dir, float3 boxMin, float3 boxMax)
-{
-  ray_dir.x = 1.0f/ray_dir.x; // may precompute if intersect many boxes
-  ray_dir.y = 1.0f/ray_dir.y; // may precompute if intersect many boxes
-  ray_dir.z = 1.0f/ray_dir.z; // may precompute if intersect many boxes
-
-  float lo = ray_dir.x*(boxMin.x - ray_pos.x);
-  float hi = ray_dir.x*(boxMax.x - ray_pos.x);
-  
-  float tmin = std::min(lo, hi);
-  float tmax = std::max(lo, hi);
-
-  float lo1 = ray_dir.y*(boxMin.y - ray_pos.y);
-  float hi1 = ray_dir.y*(boxMax.y - ray_pos.y);
-
-  tmin = std::max(tmin, std::min(lo1, hi1));
-  tmax = std::min(tmax, std::max(lo1, hi1));
-
-  float lo2 = ray_dir.z*(boxMin.z - ray_pos.z);
-  float hi2 = ray_dir.z*(boxMax.z - ray_pos.z);
-
-  tmin = std::max(tmin, std::min(lo2, hi2));
-  tmax = std::min(tmax, std::max(lo2, hi2));
-  
-  return float2(tmin, tmax);
-}
-
 static inline float3 EyeRayDir(float x, float y, float4x4 a_mViewProjInv)
 {
   float4 pos = float4(2.0f*x - 1.0f, 2.0f*y - 1.0f, 0.0f, 1.0f );
@@ -46,25 +19,6 @@ static inline void transform_ray3f(float4x4 a_mWorldViewInv, float3* ray_pos, fl
   
   (*ray_pos) = to_float3(rayPosTransformed);
   (*ray_dir) = to_float3(normalize(rayDirTransformed));
-}
-
-float4 RayMarchConstantFog(float tmin, float tmax, float& alpha)
-{
-  float dt = 0.05f;
-	float t  = tmin;
-	
-	alpha = 1.0f;
-	float4 color = float4(0.0f);
-	
-	while(t < tmax && alpha > 0.01f)
-	{
-	  float a = 0.025f;
-	  color += a*alpha*float4(1.0f,1.0f,0.0f,0.0f);
-	  alpha *= (1.0f-a);
-	  t += dt;
-	}
-	
-	return color;
 }
 
 static inline uint32_t RealColorToUint32(float4 real_color)
@@ -122,7 +76,6 @@ static inline float DE(float3 pos, float4 &color, bool &is_mirror) {
   float result = 1 / 0.000000001f;
   
   // plate
-  // result = std::min(result, SDE_Parallelepiped(pos + float3(0.f, 1.f, 0.f), float3(3.f, 0.1f, 3.f)));
   float d = SDE_Parallelepiped(pos + float3(0.f, 1.f, 0.f), float3(4.5f, 0.1f, 4.5f));
   if (d < result) {
     result = d;
@@ -141,14 +94,14 @@ static inline float DE(float3 pos, float4 &color, bool &is_mirror) {
   }
 
   // fig 1.2
-  dt = DE_tetrahedron(pos + float3(2.f, 0.f, 0.f), 8);
-  if (dt.x < result) {
-    result = dt.x;
-    float3 color_tmp = 6.2831f * dt.y + float3(0.f, 1.f, 2.f);
-    color_tmp = 0.5f + 0.5f * float3(cos(color_tmp.x), cos(color_tmp.y), cos(color_tmp.z));
-    color = float4(color_tmp.x, color_tmp.y, color_tmp.z, 1.f);
-    is_mirror = false;
-  }
+  // dt = DE_tetrahedron(pos + float3(2.f, 0.f, 0.f), 3);
+  // if (dt.x < result) {
+  //   result = dt.x;
+  //   float3 color_tmp = 6.2831f * dt.y + float3(0.f, 1.f, 2.f);
+  //   color_tmp = 0.5f + 0.5f * float3(cos(color_tmp.x), cos(color_tmp.y), cos(color_tmp.z));
+  //   color = float4(color_tmp.x, color_tmp.y, color_tmp.z, 1.f);
+  //   is_mirror = false;
+  // }
 
   // fig 1.3
   dt = DE_tetrahedron(pos + float3(-2.f, 0.f, 0.f), 10);
@@ -176,11 +129,19 @@ static inline float DE(float3 pos, float4 &color, bool &is_mirror) {
     is_mirror = false;
   }
 
-  // fig 4: mirror
+  // fig 4: mirror plate
   d = SDE_Parallelepiped(pos + float3(0.f, 0.f, -4.f), float3(4.f, 1.5f, 0.1f));
   if (d < result) {
     result = d;
     color = float4(153.f / 255, 255.f / 255, 255.f / 255, 1.f);
+    is_mirror = true;
+  }
+
+  // fig 4: mirror sphere
+  d = DE_sphere(pos + float3(1.5f, 0.f, -1.5f));
+  if (d < result) {
+    result = d;
+    color = float4(1.f);
     is_mirror = true;
   }
 
