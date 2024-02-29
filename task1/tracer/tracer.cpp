@@ -203,6 +203,7 @@ inline float calculateLight(float3 pos, float3 normal, float3 light_dir, float e
 
 void RayMarcherExample::kernel2D_RayMarch(uint32_t* out_color, uint32_t width, uint32_t height) 
 {
+  #pragma omp parallel for
   for(uint32_t y=0;y<height;y++) 
   {
     for(uint32_t x=0;x<width;x++) 
