@@ -12,11 +12,11 @@ to an arbitrary object.
 
 ## TODO
 
-- [x] SIREN (10 points)
-- [x] Visualization (5 points)
+- [ ] SIREN (10 points)
+- [ ] Visualization (5 points)
 - [ ] SIREN training (10 points)
-- [x] Forward with GPU (5 points)
-- [x] Backward with GPU (10 points)
+- [ ] Forward with GPU (5 points)
+- [ ] Backward with GPU (10 points)
 
 ## Build
 
