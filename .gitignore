@@ -32,6 +32,8 @@
 *.app
 
 .vscode
+.cache
+build
 
 task1/build
 task1/build-gpu
