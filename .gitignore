@@ -39,3 +39,8 @@ task1/build
 task1/build-gpu
 task1/tracer/include
 task1/tracer/*generated*
+
+task3/build
+task3/tracer/include
+task3/tracer/*generated*
+task3/build-gpu
