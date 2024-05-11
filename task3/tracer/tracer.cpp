@@ -47,16 +47,12 @@ inline float SDE_Parallelepiped(float3 point, float3 size) {
 
 float RayMarcherExample::DE(float3 pos, float4 &color, bool &is_mirror) {
   float result = 1 / 0.000000001f;
+  pos /= 1.2f;
 
-  // plate
-  // float d =
-  //     SDE_Parallelepiped(pos + float3(0.f, 1.f, 0.f), float3(4.5f,
-  //     0.1f, 4.5f));
-  // if (d < result) {
-  //   result = d;
-  //   color = float4(153.f / 255, 255.f / 255, 255.f / 255, 1.f);
-  //   is_mirror = false;
-  // }
+  // model return undefined values for points outside [-1, 1] box.
+  if (abs(pos.x) >= 1.f || abs(pos.y) >= 1.f || abs(pos.z) >= 1.f) {
+    return result;
+  }
 
   // Neural
   is_mirror = false;
@@ -65,12 +61,12 @@ float RayMarcherExample::DE(float3 pos, float4 &color, bool &is_mirror) {
 }
 
 float RayMarcherExample::siren_forward(float3 pos) {
-  float X[256];
+  float X[SIREN_MAX_LAYER_SIZE];
   X[0] = pos.x;
   X[1] = pos.y;
   X[2] = pos.z;
 
-  float X_tmp[256];
+  float X_tmp[SIREN_MAX_LAYER_SIZE];
   for (uint32_t layer = 0; layer < m_hidden_layers_count; ++layer) {
     const uint32_t layer_lines =
         getLayerLinesSize_A(layer, m_hidden_layers_count, m_hidden_layer_size);
@@ -131,9 +127,9 @@ inline float RayMarcherExample::calculateLight(float3 pos, float3 normal,
   //                     DE(pos + normal * coeffs[2], ignore, ignore2) +
   //                     DE(pos + normal * coeffs[3], ignore, ignore2);
   // const float ambient = max(0.0001f, alpha / betta * 0.1f);
-  const float ambient = 0.01f;
+  const float ambient = 0.1f;
 
-  return max(ambient, dot(normal, light_dir));// * (1 - shadowed));
+  return max(ambient, dot(normal, light_dir)); // * (1 - shadowed));
 }
 
 inline float4 RayMarcherExample::calculateReflection(float3 pos, float3 eye_dir,
@@ -166,7 +162,7 @@ inline float4 RayMarcherExample::calculateReflection(float3 pos, float3 eye_dir,
 
 void RayMarcherExample::kernel2D_RayMarch(uint32_t *out_color, uint32_t width,
                                           uint32_t height) {
-#pragma omp parallel for
+// #pragma omp parallel for
   for (uint32_t y = 0; y < height; y++) {
     for (uint32_t x = 0; x < width; x++) {
       const float unit_pixel_size = 1.f / float(width + height);
@@ -178,7 +174,7 @@ void RayMarcherExample::kernel2D_RayMarch(uint32_t *out_color, uint32_t width,
       transform_ray3f(m_worldViewInv, &rayPos, &rayDir);
 
       const uint32_t MAX_ITER = 255;
-      const float MAX_DIST = 1.f;
+      const float MAX_DIST = 3.f;
       const float eps = 0.00001f;
 
       float4 resColor(0.0f);

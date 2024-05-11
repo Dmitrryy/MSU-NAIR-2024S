@@ -12,10 +12,10 @@ to an arbitrary object.
 
 ## TODO
 
-- [ ] SIREN (10 points)
-- [ ] Visualization (5 points)
+- [x] SIREN (10 points)
+- [x] Visualization (5 points)
 - [ ] SIREN training (10 points)
-- [ ] Forward with GPU (5 points)
+- [x] Forward with GPU (5 points)
 - [ ] Backward with GPU (10 points)
 
 ## Build
@@ -51,20 +51,33 @@ launch:
 ```
 ./tracer_gpu
 ```
-### GPU (Legacy)
-Original way to build with kernel slicer.
-1. clone and build kernel_slicer (https://github.com/Ray-Tracing-Systems/kernel_slicer) in some directory
-2. find and use VS Code config 'Launch (LiteRF)' in 'kernel_slicer/.vscode/launch.json':
-   * you need to change all paths to your LiteRF sources
-   * launch kernel_slicer with this config
-   * you can make you own command line script if don't like VS Code configs
-3. build shaders:
-   * cd tracer/shaders_generated && bash build.sh
-4. use Cmake to build project with 'USE_VULKAN' flag == 'ON':
-   * mkdir cmake-build-release && cd cmake-build-release
-   * cmake -DCMAKE_BUILD_TYPE=Release -DUSE_VULKAN=ON ..
-   * make -j 8
-   * Note that the program will seek for 'tracer/shaders_generated/kernel2D_RayMarch.comp.spv' 
+
+## Start
+
+### Tests
+1
+```
+./tracer_cpu_test 4 64 ../references/sdf1_weights.bin ../references/sdf1_test.bin
+```
+2
+```
+./tracer_cpu_test 6 256 ../references/sdf2_weights.bin ../references/sdf2_test.bin
+```
+
+### Visualization
+
+1
+```
+./tracer_cpu 4 64 ../references/sdf1_weights.bin
+```
+or
+```
+./tracer_gpu 4 64 ../references/sdf1_weights.bin
+```
+2
+```
+./tracer_cpu 6 256 ../references/sdf2_weights.bin
+```
 
 ## Performance results
 
@@ -82,4 +95,12 @@ Original way to build with kernel slicer.
 
 ### Results
 
-TODO
+ender times for `out_gpu_0.bmp` and  `out_cpu_0.bmp` from preview:
+
+| Device          | Note              | Render Time | Copy Time (CPU <-> GPU) |
+|-----------------|-------------------|-------------|-----------|
+| CPU             |single-thread      | 13200 ms    | 0ms       |
+| CPU             |8 threads (OpenMP) | 3300 ms     | 0ms       |
+| Iris Xe         |                   | TODO        | TODO      |
+| RTX 3050 Mobile |                   | TODO        | TODO      |
+

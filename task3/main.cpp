@@ -45,8 +45,8 @@ int main(int argc, const char** argv)
   bool enableValidationLayers = false;
   #endif
 
-  uint WIN_WIDTH  = 256;
-  uint WIN_HEIGHT = 256;
+  uint WIN_WIDTH  = 512;
+  uint WIN_HEIGHT = 512;
 
   std::shared_ptr<RayMarcherExample> pImpl = nullptr;
   #ifdef USE_VULKAN
@@ -69,7 +69,7 @@ int main(int argc, const char** argv)
   for(int angleY = 0; angleY < 360; angleY += 90) 
   {
     float4x4 mRot    = rotate4x4Y(float(angleY)*DEG_TO_RAD);
-    float4   camPos  = mRot*float4(0,0,-1,0) + float4(0,0.3f,0,1);              // rotate and than translate camera position
+    float4   camPos  = mRot*float4(0,0,-1,0) + float4(0,0.85f,0,1);              // rotate and than translate camera position
     float4x4 viewMat = lookAt(to_float3(camPos), float3(0,0,0), float3(0,1,0)); // pos, look_at, up  
     
     pImpl->SetWorldViewMatrix(viewMat);

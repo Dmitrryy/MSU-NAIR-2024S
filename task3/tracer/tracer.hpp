@@ -10,6 +10,8 @@
 #include "siren.hpp"
 using namespace LiteMath;
 
+#define SIREN_MAX_LAYER_SIZE 256
+
 class RayMarcherExample // : public IRenderAPI
 {
 public:
@@ -26,7 +28,7 @@ public:
     m_hidden_layer_size = layer_size;
     m_hidden_layers_count = n_layers;
     assert(m_hidden_layers_count >= 2);
-    assert(m_hidden_layer_size <= 256 && "I am so sorry");
+    assert(m_hidden_layer_size <= SIREN_MAX_LAYER_SIZE && "I am so sorry");
 
     m_siren_hidden_layers_data =
         loadWeights(weights_path, n_layers, layer_size);
@@ -88,8 +90,8 @@ public:
 
 protected:
   // matrix methods
-  void mat_mul(const float A[256], uint32_t a_n, uint32_t a_m,
-               uint32_t B_offset, uint32_t b_n, uint32_t b_m, float C[256]) {
+  void mat_mul(const float A[SIREN_MAX_LAYER_SIZE], uint32_t a_n, uint32_t a_m,
+               uint32_t B_offset, uint32_t b_n, uint32_t b_m, float C[SIREN_MAX_LAYER_SIZE]) {
 // #pragma omp parallel for
     for (uint32_t i = 0; i < a_n; ++i) {
       for (uint32_t j = 0; j < b_m; ++j) {
@@ -105,7 +107,7 @@ protected:
   }
 
   void mat_mul_2(uint32_t A_offset, uint32_t a_n, uint32_t a_m,
-                 const float B[256], uint32_t b_n, uint32_t b_m, float C[256]) {
+                 const float B[SIREN_MAX_LAYER_SIZE], uint32_t b_n, uint32_t b_m, float C[SIREN_MAX_LAYER_SIZE]) {
 // #pragma omp parallel for
     for (uint32_t i = 0; i < a_n; ++i) {
       for (uint32_t j = 0; j < b_m; ++j) {
@@ -121,21 +123,15 @@ protected:
     }
   }
 
-  void mat_add(const float A[256], uint32_t a_n, uint32_t a_m,
-               uint32_t B_offset, float C[256]) {
-// #pragma omp parallel for
+  void mat_add(const float A[SIREN_MAX_LAYER_SIZE], uint32_t a_n, uint32_t a_m,
+               uint32_t B_offset, float C[SIREN_MAX_LAYER_SIZE]) {
     for (uint32_t i = 0; i < a_n * a_m; ++i) {
-      if (B_offset + i >= m_siren_hidden_layers_data.size()) {
-        assert(B_offset + i < m_siren_hidden_layers_data.size());
-      }
       C[i] = A[i] + m_siren_hidden_layers_data[B_offset + i];
     }
   }
 
-  void siren_activation(float A[256], uint32_t a_n, uint32_t a_m) {
-// #pragma omp parallel for
+  void siren_activation(float A[SIREN_MAX_LAYER_SIZE], uint32_t a_n, uint32_t a_m) {
     for (uint32_t i = 0; i < a_n * a_m; ++i) {
-      assert(i < 256);
       A[i] = sin(m_siren_w0 * A[i]);
     }
   }
