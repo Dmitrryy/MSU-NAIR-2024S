@@ -73,7 +73,7 @@ if(BUILD_WITH_KERNEL_SLICER)
   COMMAND ${kernel_slicer_BINARY_DIR}/kslicer ARGS ${GENERATED_DIR}/tracer.cpp -mainClass RayMarcherExample -shaderCC glsl -pattern ipv -DKERNEL_SLICER -v -I${LiteMath_SOURCE_DIR} ignore -I${kernel_slicer_SOURCE_DIR}/TINYSTL ignore -stdlibfolder ${kernel_slicer_SOURCE_DIR}/TINYSTL
   
   WORKING_DIRECTORY ${kernel_slicer_SOURCE_DIR}
-  DEPENDS kslicer ${CMAKE_CURRENT_SOURCE_DIR}/tracer/tracer.cpp ${CMAKE_CURRENT_SOURCE_DIR}/tracer/tracer.hpp
+  DEPENDS kslicer ${CMAKE_CURRENT_SOURCE_DIR}/tracer/tracer.cpp ${CMAKE_CURRENT_SOURCE_DIR}/tracer/tracer.hpp ${CMAKE_CURRENT_SOURCE_DIR}/tracer/siren.hpp
   )
 
   add_custom_target(compile_shaders
@@ -188,8 +188,12 @@ else()
                  ${LiteMath_SOURCE_DIR}/Image2d.cpp) 
 
   set_target_properties(tracer_cpu PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
-
   target_link_libraries(tracer_cpu LINK_PUBLIC OpenMP::OpenMP_CXX)
+
+  # TEST
+  add_executable(tracer_cpu_test main_test.cpp 
+  tracer/tracer.cpp
+  ${LiteMath_SOURCE_DIR}/Image2d.cpp) 
 endif()
 
 endif()
